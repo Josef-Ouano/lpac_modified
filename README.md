@@ -49,3 +49,66 @@ If you have any issue, please read [FAQ](docs/FAQ.md) first.
 - dlfcn-win32 ([/dlfcn-win32](dlfcn-win32)): MIT
 
 Copyright &copy; 2023-2025 ESTKME TECHNOLOGY LIMITED, Hong Kong
+
+---
+---
+---
+
+## Modifications to be usable in Quectel EM05G (Lenovo modifications)
+Changes are mostly minor and related to changing APDU and default AT device.
+- In src/main.c, line 135: Changed apdu_driver from 'pcsc' to 'at'
+- In driver/apdu/at.c line 60: Changed from '/dev/ttyUSB0' to '/dev/ttyUSB2'
+
+## Dependencies
+Install dependencies:
+
+$sudo apt install pkg-config\
+$sudo apt install libpcsclite-dev\
+$sudo apt install cmake\
+ssudo apt install libmbim-glib-dev\
+$sudo apt install libcurl4-openssl-dev
+
+## Build
+Standard Cmake instructions are applicable:
+
+$cd lpac_modified\
+$mkdir build\
+$cd build\
+$cmake ..\
+$make 
+
+## Usage
+Go to /build/output/ first.
+
+Usage instructions are in /docs/USAGE.md\
+But below are some commands that can be quickly referenced for profile operations:
+
+### Profile Operations
+
+#### > Base command:
+>$sudo ./lpac profile <list|enable|disable|nickname|delete|download|>
+
+Below are some commands that are useful for profile management:
+
+#### > Profile Download
+Base command:
+>$sudo ./lpac profile download -a '<LPA_Authentication_code>'
+
+Example:\
+sudo ./lpac profile download -a 'LPA:1$rsp.truphone.com$QR-G-5C-1LS-1W1Z9P7'
+
+#### > Profile list
+>$sudo ./lpac profile list
+
+Sample output:\
+{"type":"lpa","payload":{"code":0,"message":"success","data":[{"iccid":"89000000000000000012","isdpAid":"a0000005591010ffffffff8900002000","profileState":"disabled","profileNickname":"test22","serviceProviderName":"Rohde & Schwarz","profileName":"R&S CMW500","iconType":null,"icon":null,"profileClass":"test"}]}}
+
+
+#### > Profile Enable/disable/delete
+
+The 'isdpAid' or 'iccid' is used as reference for profile
+
+Example:\
+$sudo ./lpac profile enable a0000005591010ffffffff8900002000\
+$sudo ./lpac profile disable a0000005591010ffffffff8900002000\
+$sudo ./lpac profile delete a0000005591010ffffffff8900002000

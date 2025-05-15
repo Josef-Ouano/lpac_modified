@@ -52,7 +52,7 @@ static int apdu_interface_connect(struct euicc_ctx *ctx)
 
     if (!(device = getenv("AT_DEVICE")))
     {
-        device = "/dev/ttyUSB0";
+        device = "/dev/ttyUSB2";
     }
 
     fuart = fopen(device, "r+");

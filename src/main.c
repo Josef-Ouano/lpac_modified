@@ -167,7 +167,7 @@ int main(int argc, char **argv)
     apdu_driver = getenv(ENV_APDU_DRIVER);
     if (apdu_driver == NULL)
     {
-        apdu_driver = "pcsc";
+        apdu_driver = "at";
     }
 
     http_driver = getenv(ENV_HTTP_DRIVER);
