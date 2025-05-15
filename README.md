@@ -54,10 +54,10 @@ Copyright &copy; 2023-2025 ESTKME TECHNOLOGY LIMITED, Hong Kong
 ---
 ---
 
-## Modifications to be usable in Quectel EM05G (Lenovo modifications)
+## Lenovo Modifications (Quectel WWAN Modules Support)
 Changes are mostly minor and related to changing APDU and default AT device.
 - In src/main.c, line 135: Changed apdu_driver from 'pcsc' to 'at'
-- In driver/apdu/at.c line 60: Changed from '/dev/ttyUSB0' to '/dev/ttyUSB2'
+- In driver/apdu/at.c, added modifications to add support for the following devices: EM05G,RM520N-GL,EM160R-GL
 
 ## Dependencies
 Install dependencies:
@@ -106,7 +106,7 @@ Sample output:\
 
 #### > Profile Enable/disable/delete
 
-The 'isdpAid' or 'iccid' is used as reference for profile
+The 'isdpAid' is used as reference for profile
 
 Example:\
 $sudo ./lpac profile enable a0000005591010ffffffff8900002000\

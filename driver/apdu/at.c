@@ -14,6 +14,15 @@ static FILE *fuart;
 static int logic_channel = 0;
 static char *buffer;
 
+//MODIFICATION - START
+enum WWAN_MODULES
+{
+    RM520N_GL,
+    EM160R_GL,
+    EM05_G,
+};
+//MODIFICATION - END
+
 static int at_expect(char **response, const char *expected)
 {
     memset(buffer, 0, AT_BUFFER_SIZE);
@@ -44,15 +53,81 @@ static int at_expect(char **response, const char *expected)
     return 0;
 }
 
+//MODIFICATION - START
+static int get_wwan_module (void) 
+{
+	int ret;
+	char *cmd = "mmcli -m any";
+	char buf[1024];
+	FILE *fp;
+
+	if ((fp = popen(cmd, "r")) == NULL) {
+		fprintf(stderr,"Error opening pipe");
+		return -1;
+	}
+
+	//Check which WWAN module is installed
+	while (fgets(buf, 1024, fp) != NULL) {
+		if(strstr(buf, "RM520N-GL") != NULL) {
+			ret = RM520N_GL;
+			break;
+		} else if(strstr(buf, "EM160R-GL") != NULL) {
+			ret = EM160R_GL;
+			break;
+		} else if(strstr(buf, "EM05-G") != NULL) {
+            ret = EM05_G;
+			break;
+		} else {
+			ret = -1;
+		}
+	}
+
+	if(pclose(fp))  {
+		fprintf(stderr,"Failed getting WWAN module");
+		ret = -1;
+	}
+
+	return ret;
+}
+//MODIFICATION - END
+
 static int apdu_interface_connect(struct euicc_ctx *ctx)
 {
     const char *device;
 
     logic_channel = 0;
 
+    //MODIFICATION - START
+    int wwan_module = 0;
+    //MODIFICATION - END
+
     if (!(device = getenv("AT_DEVICE")))
     {
-        device = "/dev/ttyUSB2";
+        //MODIFICATION - START
+        wwan_module = get_wwan_module();
+
+        switch(wwan_module)
+        {
+            case RM520N_GL:
+                device = "/dev/wwan0at0";
+                fprintf(stderr, "Set to /dev/wwan0at0: RM520N-GL\n");
+                break;
+            case EM160R_GL:
+                device = "/dev/wwan0at0";
+                fprintf(stderr, "Set to /dev/wwan0at0: EM160R-GL\n");
+                break;
+            case EM05_G:
+                device = "/dev/ttyUSB2";
+                fprintf(stderr, "Set to /dev/ttyUSB2: EM05-G\n");
+                break;
+            default:
+                device = "/dev/ttyUSB2";
+                fprintf(stderr, "Set to /dev/ttyUSB2: No Module detected\n");
+                break;
+        }
+        //MODIFICATION - END
+
+        //device = "/dev/ttyUSB0";
     }
 
     fuart = fopen(device, "r+");
@@ -81,7 +156,7 @@ static int apdu_interface_connect(struct euicc_ctx *ctx)
         fprintf(stderr, "Device missing AT+CGLA support\n");
         return -1;
     }
-
+    
     return 0;
 }
 
