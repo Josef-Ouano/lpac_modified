@@ -14,6 +14,24 @@ static FILE *fuart;
 static int logic_channel = 0;
 static char *buffer;
 
+//LENOVO MODIFY
+enum WWAN_MODULE
+{
+	RM520N,
+	EM160R,
+	EM05G,
+//LENOVO MODIFY - EM061K TESTING
+    EM061K,
+//LENOVO MODIFY - EM061K TESTING
+
+	NOT_SUPPORTED
+};
+
+#define AT_PORT_DEFAULT "/dev/ttyUSB0"
+#define AT_PORT_QUECTEL "/dev/wwan0at0"
+#define AT_PORT_QUECTEL_EM05G "/dev/ttyUSB2"
+//LENOVO MODIFY
+
 static int at_expect(char **response, const char *expected)
 {
     memset(buffer, 0, AT_BUFFER_SIZE);
@@ -44,6 +62,120 @@ static int at_expect(char **response, const char *expected)
     return 0;
 }
 
+//LENOVO MODIFY
+static int checkWWANModuleInstalled(void)
+{
+    int ret;
+    int wwan_value;
+	char *lspci_cmd= "/usr/bin/lspci";
+	char buffer[1024];
+	FILE *fp;
+
+	//Execute lspci command using popen and save output to fp
+	if ((fp = popen(lspci_cmd, "r")) == NULL) {
+		return -1;
+	}
+
+	//Check which WWAN module is installed
+	while (fgets(buffer, 1024, fp) != NULL) {
+		if(strstr(buffer, "1007") != NULL) {
+			wwan_value = RM520N;
+			break;
+		} else if(strstr(buffer, "100d") != NULL) {
+			wwan_value = EM160R;
+			break;
+		} else {
+			wwan_value = -1;
+		}
+	}
+
+	if(pclose(fp))  {
+		wwan_value = -1;
+	}
+
+	return wwan_value;
+}
+
+static int checkUSBWWANModuleInstalled(void)
+{
+    int wwan_value = 0;
+	char *lsusb_cmd = "/usr/bin/lsusb";
+	char buffer[1024];
+	FILE *fp;
+
+	//Execute lsusb command using popen and save output to fp
+	if ((fp = popen(lsusb_cmd, "r")) == NULL) {
+		wwan_value = -1;
+	}
+
+	//Check which WWAN module is installed
+	while (fgets(buffer, 1024, fp) != NULL) {
+        if(strstr(buffer, "2c7c:0311") != NULL) {
+			wwan_value = EM05G;
+			break;
+		//EM05G 2c7c:030a
+		} else if(strstr(buffer, "2c7c:030a") != NULL) {
+			wwan_value = EM05G;
+			break;
+//LENOVO MODIFY - EM061K TESTTING
+        } else if(strstr(buffer, "2c7c:6008") != NULL) {
+			wwan_value = EM061K;
+			break;
+//LENOVO MODIFY - EM061K TESTTING
+		} else {
+			wwan_value = -1;
+		}
+	}
+
+	if(pclose(fp))  {
+		wwan_value = -1;
+	}
+
+	return wwan_value;
+}
+
+static char *checkWWANDevice(void)
+{
+    int wwan_module = -1;
+    char *at_port = malloc(AT_BUFFER_SIZE);
+
+	wwan_module = checkWWANModuleInstalled();
+           fprintf(stderr, "checkWWANModuleInstalled triggered\n");
+	if (wwan_module < 0) {
+		wwan_module = checkUSBWWANModuleInstalled();
+        fprintf(stderr, "checkUSBWWANModuleInstalled triggered\n");
+	} 
+
+    switch(wwan_module)
+	{
+		case RM520N:
+			at_port = AT_PORT_QUECTEL;
+            fprintf(stderr, "RM520NGL\n");
+			break;
+		case EM160R:
+			at_port = AT_PORT_QUECTEL;
+            fprintf(stderr, "EM160RGL\n");
+			break;
+		case EM05G:
+			at_port = AT_PORT_QUECTEL_EM05G;
+            fprintf(stderr, "EM05G\n");
+			break;
+//LENOVO MODIFY - EM061K TESTTING
+        case  EM061K:
+            at_port = AT_PORT_QUECTEL_EM05G;
+            fprintf(stderr, "EM061kGL\n");
+            break;
+//LENOVO MODIFY - EM061K TESTTING
+		default:
+            at_port = AT_PORT_DEFAULT;
+            fprintf(stderr, "DEFAULT\n");
+			break;
+	}
+
+    return at_port;
+}
+//LENOVO MODIFY
+
 static int apdu_interface_connect(struct euicc_ctx *ctx)
 {
     const char *device;
@@ -52,7 +184,8 @@ static int apdu_interface_connect(struct euicc_ctx *ctx)
 
     if (!(device = getenv("AT_DEVICE")))
     {
-        device = "/dev/ttyUSB0";
+        //device = "/dev/ttyUSB0";
+        device = checkWWANDevice();
     }
 
     fuart = fopen(device, "r+");
@@ -81,7 +214,7 @@ static int apdu_interface_connect(struct euicc_ctx *ctx)
         fprintf(stderr, "Device missing AT+CGLA support\n");
         return -1;
     }
-
+    
     return 0;
 }
 
