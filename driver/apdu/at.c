@@ -69,7 +69,7 @@ static int checkWWANModuleInstalled(void)
     int wwan_value;
 	char *lspci_cmd= "/usr/bin/lspci";
 	char buffer[1024];
-	FILE *fp;
+	FILE *fp = NULL;
 
 	//Execute lspci command using popen and save output to fp
 	if ((fp = popen(lspci_cmd, "r")) == NULL) {
@@ -101,7 +101,7 @@ static int checkUSBWWANModuleInstalled(void)
     int wwan_value = 0;
 	char *lsusb_cmd = "/usr/bin/lsusb";
 	char buffer[1024];
-	FILE *fp;
+	FILE *fp = NULL;
 
 	//Execute lsusb command using popen and save output to fp
 	if ((fp = popen(lsusb_cmd, "r")) == NULL) {
@@ -134,13 +134,14 @@ static int checkUSBWWANModuleInstalled(void)
 	return wwan_value;
 }
 
+/*
 static char *checkWWANDevice(void)
 {
     int wwan_module = -1;
     char *at_port = malloc(AT_BUFFER_SIZE);
 
 	wwan_module = checkWWANModuleInstalled();
-           fprintf(stderr, "checkWWANModuleInstalled triggered\n");
+    fprintf(stderr, "checkWWANModuleInstalled triggered\n");
 	if (wwan_module < 0) {
 		wwan_module = checkUSBWWANModuleInstalled();
         fprintf(stderr, "checkUSBWWANModuleInstalled triggered\n");
@@ -150,15 +151,15 @@ static char *checkWWANDevice(void)
 	{
 		case RM520N:
 			at_port = AT_PORT_QUECTEL;
-            fprintf(stderr, "RM520NGL\n");
+            //fprintf(stderr, "RM520NGL\n");
 			break;
 		case EM160R:
 			at_port = AT_PORT_QUECTEL;
-            fprintf(stderr, "EM160RGL\n");
+            //fprintf(stderr, "EM160RGL\n");
 			break;
 		case EM05G:
 			at_port = AT_PORT_QUECTEL_EM05G;
-            fprintf(stderr, "EM05G\n");
+            //fprintf(stderr, "EM05G\n");
 			break;
 //LENOVO MODIFY - EM061K TESTTING
         case  EM061K:
@@ -168,11 +169,93 @@ static char *checkWWANDevice(void)
 //LENOVO MODIFY - EM061K TESTTING
 		default:
             at_port = AT_PORT_DEFAULT;
-            fprintf(stderr, "DEFAULT\n");
+            //fprintf(stderr, "DEFAULT\n");
 			break;
 	}
 
     return at_port;
+}
+*/
+
+static char *checkWWANDevice(void)
+{
+    char *at_port = malloc(AT_BUFFER_SIZE);
+    char *mmcli_cmd = "mmcli -m any";
+    char *at_line = malloc(1024);
+    char *at_line_port = "";
+    char *at_line_port_2 = "";
+    char *token;
+    char *token_2;
+    char *at_port_token;
+    char *at_port_token_2;
+
+    char buffer[1024];
+    char port_checker[10] = "ports:";
+
+    int ctr = 0;
+    FILE *fp = NULL;
+
+    at_port = "/dev/ttyUSB0";
+	
+    //Execute mmcli command using popen and save output to fp
+	if ((fp = popen(mmcli_cmd, "r")) == NULL) {
+		at_port = "/dev/ttyUSB0";
+    }
+
+    //Check which WWAN module AT port
+    while (fgets(buffer, 1024, fp) != NULL) {
+
+        at_line = strstr(buffer, port_checker);
+        if (at_line != NULL)
+        {
+            //Split by ":"
+            token = strtok(at_line, ":");
+
+            while(token!=NULL)
+            {
+                printf("TOKEN:%s\n", token ); //printing each token
+                
+                if(ctr == 1)
+                {
+                    //Split by ","
+                    token_2 = strtok(token, ",");
+                    while(token_2!=NULL)
+                    {
+                        printf("TOKEN_2:%s\n", token_2 ); //printing each token
+                        at_line_port_2 = strstr(token_2, "(at)");
+                        printf("TOKEN_2 - at port:%s\n", at_line_port_2);
+
+                        if(at_line_port_2 == NULL)
+                        {
+                            token_2 = strtok(NULL, ",");
+                        }
+                        else
+                        {
+                            //Extract AT port and reconstitute
+                            printf("AT port found\n");
+
+                            at_port_token_2 = strtok(token_2, " ");
+                            while(at_port_token_2!=NULL)
+                            {
+                                printf("at_port_token_2:%s\n", at_port_token_2);
+                                asprintf(&at_port, "/dev/%s", at_port_token_2);
+
+                                printf("FINAL AT PORT:%s\n", at_port);
+                                break;
+                            }
+
+                            break;
+                        }   
+                    }
+                }
+                
+                token = strtok(NULL, ":");
+                ctr++;
+            }
+        }            
+    }
+    return at_port;
+    
 }
 //LENOVO MODIFY
 
@@ -194,7 +277,7 @@ static int apdu_interface_connect(struct euicc_ctx *ctx)
         fprintf(stderr, "Failed to open device: %s\n", device);
         return -1;
     }
-    setbuf(fuart, NULL);
+    //setbuf(fuart, NULL);
 
     fprintf(fuart, "AT+CCHO=?\r\n");
     if (at_expect(NULL, NULL))
