@@ -162,17 +162,13 @@
 
                 while(token!=NULL)
                 {
-                    printf("TOKEN:%s\n", token ); //printing each token
-                    
                     if(ctr == 1)
                     {
                         //Split by ","
                         token_2 = strtok(token, ",");
                         while(token_2!=NULL)
                         {
-                            printf("TOKEN_2:%s\n", token_2 ); //printing each token
                             at_line_port_2 = strstr(token_2, "(at)");
-                            printf("TOKEN_2 - at port:%s\n", at_line_port_2);
 
                             if(at_line_port_2 == NULL)
                             {
@@ -181,15 +177,10 @@
                             else
                             {
                                 //Extract AT port and reconstitute
-                                printf("AT port found\n");
-
                                 at_port_token_2 = strtok(token_2, " ");
                                 while(at_port_token_2!=NULL)
                                 {
-                                    printf("at_port_token_2:%s\n", at_port_token_2);
                                     asprintf(&at_port, "/dev/%s", at_port_token_2);
-
-                                    printf("FINAL AT PORT:%s\n", at_port);
                                     break;
                                 }
 
