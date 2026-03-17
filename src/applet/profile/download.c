@@ -65,6 +65,31 @@ static cJSON *build_download_result_json(const struct es10b_load_bound_profile_p
     return jdata;
 }
 
+static cJSON *build_access_rules_json(const struct es8p_metadata_access_rule *rules) {
+    cJSON *jrules = cJSON_CreateArray();
+    const struct es8p_metadata_access_rule *rule = rules;
+
+    if (!jrules) {
+        return NULL;
+    }
+
+    while (rule) {
+        cJSON *jrule = cJSON_CreateObject();
+        if (!jrule) {
+            cJSON_Delete(jrules);
+            return NULL;
+        }
+
+        cJSON_AddStringOrNullToObject(jrule, "certificateHash", rule->certificateHash);
+        cJSON_AddStringOrNullToObject(jrule, "packageName", rule->packageName);
+        cJSON_AddItemToArray(jrules, jrule);
+
+        rule = rule->next;
+    }
+
+    return jrules;
+}
+
 static int applet_main(int argc, char **argv) {
     int fret;
     const char *error_function_name = NULL;
@@ -83,6 +108,7 @@ static int applet_main(int argc, char **argv) {
     struct es10b_load_bound_profile_package_result download_result = {0};
 
     cJSON *jmetadata = NULL;
+    cJSON *jaccessRules = NULL;
     _cleanup_(es8p_metadata_free) struct es8p_metadata *profile_metadata = NULL;
 
     while ((opt = getopt(argc, argv, opt_string)) != -1) {
@@ -239,6 +265,13 @@ static int applet_main(int argc, char **argv) {
         cJSON_AddStringOrNullToObject(jmetadata, "icon", profile_metadata->icon);
         cJSON_AddStringOrNullToObject(jmetadata, "profileClass",
                                       euicc_profileclass2str(profile_metadata->profileClass));
+        if (profile_metadata->accessRules) {
+            jaccessRules = build_access_rules_json(profile_metadata->accessRules);
+            if (jaccessRules) {
+                cJSON_AddItemToObject(jmetadata, "accessRules", jaccessRules);
+                jaccessRules = NULL;
+            }
+        }
 
         jprint_progress_obj("es8p_metadata_parse", jmetadata);
 
